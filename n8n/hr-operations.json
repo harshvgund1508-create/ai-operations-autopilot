@@ -1,0 +1,48 @@
+{
+  "name": "AI Operations Autopilot - HR Candidate Screening & Scheduling",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "hr-operations" },
+      "id": "hr-webhook",
+      "name": "Candidate Resume Ingest Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "prompt": "Extract candidate skills, years of experience, and compute job spec score." },
+      "id": "hr-ai-parser",
+      "name": "AI Resume & Skills Matcher",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": { "toEmail": "={{$json.candidate_email}}", "subject": "Next Steps: Screening Invitation" },
+      "id": "hr-calendly-invite",
+      "name": "Send Calendly Screening Invite",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": { "channel": "#eng-hiring", "text": "🎯 New Qualified Candidate: {{$json.candidate_name}} ({{$json.score}}% match). Screening sent." },
+      "id": "hr-slack-alert",
+      "name": "Notify Hiring Manager",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [920, 300]
+    }
+  ],
+  "connections": {
+    "Candidate Resume Ingest Webhook": {
+      "main": [[{ "node": "AI Resume & Skills Matcher", "type": "main", "index": 0 }]]
+    },
+    "AI Resume & Skills Matcher": {
+      "main": [[{ "node": "Send Calendly Screening Invite", "type": "main", "index": 0 }]]
+    },
+    "Send Calendly Screening Invite": {
+      "main": [[{ "node": "Notify Hiring Manager", "type": "main", "index": 0 }]]
+    }
+  }
+}

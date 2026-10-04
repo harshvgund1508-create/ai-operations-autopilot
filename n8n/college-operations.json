@@ -1,0 +1,33 @@
+{
+  "name": "AI Operations Autopilot - College Fest Registration Compliance",
+  "nodes": [
+    {
+      "parameters": { "pollTimes": { "item": [{ "mode": "everyX", "value": 5, "unit": "minutes" }] } },
+      "id": "col-poll",
+      "name": "Poll Google Sheets Registrations",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "prompt": "Identify attendees missing student ID document uploads." },
+      "id": "col-ai-audit",
+      "name": "Document Compliance AI",
+      "type": "n8n-nodes-base.openAi",
+      "position": [460, 300]
+    },
+    {
+      "parameters": { "operation": "sendMessage", "templateName": "fest_upload_magic_token" },
+      "id": "col-whatsapp",
+      "name": "Send WhatsApp Magic Upload Links",
+      "type": "n8n-nodes-base.whatsapp",
+      "position": [700, 300]
+    },
+    {
+      "parameters": { "resource": "databasePage", "operation": "create" },
+      "id": "col-notion",
+      "name": "Create Volunteer Task in Notion",
+      "type": "n8n-nodes-base.notion",
+      "position": [920, 300]
+    }
+  ]
+}

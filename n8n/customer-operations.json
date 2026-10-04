@@ -1,0 +1,112 @@
+{
+  "name": "AI Operations Autopilot - Customer Operations (Delayed Order)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-operations",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.5-flash",
+        "systemMessage": "You are AI Operations Autopilot Context Engine. Extract Intent, Customer Risk, Order Value, Deadline, and Confidence score. Generate structured JSON."
+      },
+      "id": "node-ai-context",
+      "name": "AI Context & Reasoning Engine",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM orders WHERE order_id = $1"
+      },
+      "id": "node-db-lookup",
+      "name": "PostgreSQL Order DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$node['AI Context & Reasoning Engine'].json.confidence}}",
+              "operation": "largerEqual",
+              "value2": 85
+            }
+          ]
+        }
+      },
+      "id": "node-if-confidence",
+      "name": "Safety Policy Router",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#dispatch-urgent",
+        "text": "=🚨 URGENT ORDER EXPEDITE: Order #{{$node['PostgreSQL Order DB'].json.order_id}} (₹{{$node['PostgreSQL Order DB'].json.amount}}) halted at North Hub. Reassign to priority morning delivery."
+      },
+      "id": "node-slack-alert",
+      "name": "Notify Logistics Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$node['Webhook Trigger'].json.customer_email}}",
+        "subject": "Update regarding your Order #{{$node['PostgreSQL Order DB'].json.order_id}}",
+        "text": "=Hi Priya,\n\nWe verified your order is currently at North Logistics Hub. Our supervisor has expedited the shipment for guaranteed delivery tomorrow before 2:00 PM.\n\nLive GPS Track: https://track.opspilot.ai/ORD-48291"
+      },
+      "id": "node-sendgrid-email",
+      "name": "Send Customer GPS Reassurance",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1140, 400]
+    },
+    {
+      "parameters": {
+        "amount": 120,
+        "unit": "minutes"
+      },
+      "id": "node-wait-monitor",
+      "name": "Schedule 2h Watchdog Follow-Up",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1380, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "AI Context & Reasoning Engine", "type": "main", "index": 0 }]]
+    },
+    "AI Context & Reasoning Engine": {
+      "main": [[{ "node": "PostgreSQL Order DB", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL Order DB": {
+      "main": [[{ "node": "Safety Policy Router", "type": "main", "index": 0 }]]
+    },
+    "Safety Policy Router": {
+      "main": [
+        [
+          { "node": "Notify Logistics Team", "type": "main", "index": 0 },
+          { "node": "Send Customer GPS Reassurance", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Schedule 2h Watchdog Follow-Up", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}
